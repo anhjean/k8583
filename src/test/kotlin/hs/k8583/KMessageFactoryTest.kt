@@ -15,7 +15,9 @@ internal class KMessageFactoryTest {
       parseMap {
         0x1100 has {
           2 to LlvarParseInfo()
-          37 to NumericParseInfo(12)
+          3 to NumericParseInfo(6)
+          12 to NumericParseInfo(12)
+          // other fields omitted
         }
       }
     }
@@ -27,7 +29,9 @@ internal class KMessageFactoryTest {
 
     val message2 = factory1.message(0x1100) {
       2 from "9004001200001234"
-      37 from "123412341234"
+      3 from "010000"
+      12 from "220817060000"
+      // other fields omitted
     }
 
     assertEquals(message1.debugString(), message2.debugString())
