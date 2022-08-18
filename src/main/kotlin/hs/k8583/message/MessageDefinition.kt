@@ -7,7 +7,7 @@ class MessageDefinition(definition: MessageDefinition.() -> Unit) {
     definition()
   }
 
-  infix fun Int.from(value: Any) {
+  infix fun Int.to(value: Any) {
     valueMap[this] = value
   }
 }

@@ -1,50 +1,86 @@
 # k8583
 
-> This library is in early stages of development and is not suited for production use.
+> This project is in the early stages of development and not suited for production use.
 
-**k8583** is a Kotlin wrapper for **j8583**. Although the original library can be as easily used in Kotlin, this library adds a number of convenient features if
-the primary language of your project is Kotlin.
+**k8583** is a Kotlin wrapper for its Java counterpart, the [**j8583**.](https://bitbucket.org/chochos/j8583/src/master/) Although the original library can be
+as easily used in Kotlin, this library adds a number of convenient features if the primary language of your project is Kotlin.
 
-### The Short Pitch
-This library uses Kotlin features to make it easy to work with ISO8583. Using DSLs you can define message factories in a JSON like structure:
+### Message Factory
+
+k8583 uses Kotlin features to make it easy to work with the ISO8583 standard. Using DSLs you can define message factories in a JSON like structure:
 
 ```kotlin
-// messageFactory is of type KMessageFactory
 val factory = messageFactory {
-  characterEncoding = "UTF8"
+  isBinaryHeader = true
+  isUseBinaryBitmap = true
+  characterEncoding = "UTF-8"
 
-  parseMap {
-    0x1100 has {
-      2 to LlvarParseInfo()
-      3 to NumericParseInfo(6)
-      12 to NumericParseInfo(12)
-      // other fields omitted
-    }
+  // define all fields once
+  fields {
+    2 to LlvarParseInfo()
+    3 to NumericParseInfo(6)
+    12 to NumericParseInfo(12)
+    // other fields omitted
+    37 to NumericParseInfo(12)
+    39 to NumericParseInfo(3)
+    48 to LllvarParseInfo()
+    49 to NumericParseInfo(3)
   }
+
+  // define message types by only mentioning the fields used
+  // network management
+  0x1804 uses listOf(12, 24, 37)
+  0x1814 uses listOf(12, 37, 39)
+  // financial messages
+  0x1100 uses listOf(2, 3, 12, 37, 48)
+  0x1110 uses listOf(2, 3, 12, 37, 39, 48)
+  // reversals
+  0x1420 extends 0x1100
+  0x1421 extends 0x1100
+  0x1430 extends 0x1110
 }
 ```
-To create messages, you only need to provide the field numbers and their values:
+
+### Messages
+
+To create messages, provide the field numbers and their values:
+
 ```kotlin
 val message = factory.message(0x1100) {
-  2 from "9004001200001234"
-  3 from "010000"
-  12 from "220817060000"
+  2 to "9004010088881234"
+  3 to "010000"
+  12 to "220820064847"
   // other fields omitted
+  37 to "123412341234"
+  49 to "971"
 }
 ```
 
-## TL;DR
-### Building a `MessageFactory`
-You would normally build a `MessageFactory` like this:
+### Utility Methods
+
+Get/set message values using an array index syntax:
 
 ```kotlin
-val factory = MessageFactory<IsoMessage>()
-factory.characterEncoding = "UTF-8"
-factory.isUseBinaryBitmap = true
-factory.isBinaryHeader = true
-// NOTE: you are still adding a custom field in 
-// your Java/Kotlin code
-factory.setCustomField(48, CustomField48())
-// the xml file contains your message types and fields
-factory.setConfigPath("file.xml")
+import hs.k8583.util.IsoMessageUtil.get
+import hs.k8583.util.IsoMessageUtil.set
+
+val cardNumber = "9004010088881234"
+// setter (only when passing string values)
+message[2] = IsoValue(IsoType.LLVAR, cardNumber)
+// getter
+assertEquals(cardNumber, message[2])
+```
+
+Destructure `IsoValue`s to get their component parts:
+
+```kotlin
+import hs.k8583.util.IsoValueUtil.component1
+import hs.k8583.util.IsoValueUtil.component2
+import hs.k8583.util.IsoValueUtil.component3
+import hs.k8583.util.IsoValueUtil.component4
+import hs.k8583.util.IsoValueUtil.component5
+import hs.k8583.util.IsoValueUtil.component6
+
+val isoValue = IsoValue(IsoType.NUMERIC, "123412341234", 12)
+val (type, value, encoder, length, encoding, timeZone) = isoValue
 ```
